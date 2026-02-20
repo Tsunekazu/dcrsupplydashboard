@@ -70,8 +70,8 @@ function App() {
     <div className="page">
       {/* ▸ HEADER */}
       <header className="header fade-in">
-        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/decred-logo-white-transparent.svg" alt="Decred" style={{ height: '24px', width: 'auto' }} />
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <img src="/decred-logo-white-transparent.svg" alt="Decred" style={{ height: '32px', width: 'auto' }} />
           <div style={{ transform: 'translateY(1px)' }}><span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
         </div>
         <div className="header-meta" style={{ transform: 'translateY(1px)' }}>
