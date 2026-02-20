@@ -71,10 +71,7 @@ function App() {
       {/* ▸ HEADER */}
       <header className="header fade-in">
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="22" height="22">
-            <path fill="#2ed6a1" d="M512 0C229.2 0 0 229.2 0 512s229.2 512 512 512 512-229.2 512-512S794.8 0 512 0z" />
-            <path fill="#091440" d="M699.2 512c0-155.6-79.6-267.6-258.8-267.6H275.6v535.2h164.8c179.2 0 258.8-112 258.8-267.6z m-166.4 0c0 104.8-17.6 156.4-110 156.4H396V355.6h26.8c92.4 0 110 51.6 110 156.4z" />
-          </svg>
+          <img src="/decred-logo-white-transparent.svg" alt="Decred" style={{ width: '22px', height: '22px' }} />
           <div>DECRED <span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
         </div>
         <div className="header-meta">
