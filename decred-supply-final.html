@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DECRED — Supply Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --blue-deep: #001D6C;
+    --blue-bg: #002A9A;
+    --blue-mid: #0043CE;
+    --blue-light: #4589FF;
+    --blue-pale: #A6C8FF;
+    --blue-ghost: rgba(69, 137, 255, 0.12);
+    --white: #FFFFFF;
+    --w95: rgba(255,255,255,0.95);
+    --w80: rgba(255,255,255,0.80);
+    --w60: rgba(255,255,255,0.60);
+    --w40: rgba(255,255,255,0.40);
+    --w25: rgba(255,255,255,0.25);
+    --w15: rgba(255,255,255,0.15);
+    --w08: rgba(255,255,255,0.08);
+    --w04: rgba(255,255,255,0.04);
+    --teal: #08BDBA;
+    --red: #FF8389;
+    --gold: #F1C21B;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --font-sans: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+    --max-w: 880px;
+  }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--blue-deep);
+    color: var(--white);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ═══════════════════════════════════
+     Subtle background texture
+     ═══════════════════════════════════ */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 100% 70% at 50% 20%, rgba(0, 67, 206, 0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 50% at 20% 80%, rgba(0, 42, 154, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 44px 40px 72px;
+  }
+
+  /* ═══════════════════════════════════
+     HEADER
+     ═══════════════════════════════════ */
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--w15);
+    margin-bottom: 80px;
+  }
+
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--w80);
+    text-transform: uppercase;
+  }
+  .logo-dim {
+    font-weight: 400;
+    color: var(--w40);
+  }
+  .logo-sep {
+    color: var(--w25);
+    margin: 0 2px;
+  }
+
+  .header-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w40);
+    text-align: right;
+    line-height: 1.7;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    margin-right: 5px;
+    vertical-align: middle;
+    animation: blink 2.5s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  /* ═══════════════════════════════════
+     HERO — 72% LOCKED
+     ═══════════════════════════════════ */
+  .hero {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .hero-number {
+    font-family: var(--font-sans);
+    font-size: clamp(120px, 22vw, 220px);
+    font-weight: 700;
+    line-height: 0.85;
+    letter-spacing: -6px;
+    color: var(--white);
+    margin-bottom: 0;
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+  }
+
+  .hero-pct {
+    font-size: 0.35em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--w60);
+    margin-left: 8px;
+    vertical-align: baseline;
+  }
+
+  .hero-word {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    color: var(--w60);
+    text-transform: uppercase;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .hero-sub {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--w40);
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ═══════════════════════════════════
+     THE RATIO — standalone callout
+     ═══════════════════════════════════ */
+  .ratio-block {
+    text-align: center;
+    padding: 64px 20px;
+    margin-bottom: 0;
+  }
+
+  .ratio-text {
+    font-family: var(--font-sans);
+    font-size: clamp(22px, 3.5vw, 32px);
+    font-weight: 300;
+    line-height: 1.5;
+    color: var(--w60);
+    max-width: 660px;
+    margin: 0 auto;
+  }
+
+  .ratio-text strong {
+    font-weight: 700;
+    color: var(--white);
+  }
+
+  /* ═══════════════════════════════════
+     DIVIDER
+     ═══════════════════════════════════ */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--w15);
+    margin: 0 0 48px 0;
+  }
+  .divider-spacious {
+    margin: 0 0 64px 0;
+  }
+
+  /* ═══════════════════════════════════
+     TICKER ROW
+     ═══════════════════════════════════ */
+  .ticker {
+    display: flex;
+    align-items: baseline;
+    gap: 32px;
+    flex-wrap: wrap;
+    padding: 20px 0;
+    border-top: 1px solid var(--w15);
+    border-bottom: 1px solid var(--w15);
+    margin-bottom: 72px;
+  }
+
+  .ticker-item {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--w40);
+  }
+  .ticker-item .v {
+    font-weight: 600;
+    color: var(--w95);
+  }
+  .ticker-item .up { color: var(--teal); }
+  .ticker-item .dn { color: var(--red); }
+
+  /* ═══════════════════════════════════
+     SECTION LABELS
+     ═══════════════════════════════════ */
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    color: var(--w40);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  /* ═══════════════════════════════════
+     SQUEEZE BAR
+     ═══════════════════════════════════ */
+  .squeeze-section {
+    margin-bottom: 72px;
+  }
+
+  .squeeze-bar {
+    position: relative;
+    width: 100%;
+    height: 64px;
+    background: var(--w04);
+    border: 1px solid var(--w15);
+    display: flex;
+    overflow: hidden;
+  }
+
+  .sq-segment {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    transition: width 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sq-staked {
+    background: var(--blue-mid);
+    border-right: 1px solid var(--w25);
+    z-index: 3;
+  }
+
+  .sq-treasury {
+    background: var(--blue-light);
+    border-right: 1px solid var(--w25);
+    z-index: 2;
+  }
+
+  /* THE LIQUID SLIVER — thin, dim, precarious */
+  .sq-liquid {
+    background: rgba(0, 10, 40, 0.6);
+    position: relative;
+    z-index: 4;
+  }
+  /* pulsing edge lines to draw attention to how thin this is */
+  .sq-liquid::before,
+  .sq-liquid::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+  }
+  .sq-liquid::before {
+    left: 0;
+    background: var(--red);
+    box-shadow: 0 0 8px rgba(255, 131, 137, 0.4);
+    animation: edgePulse 2s ease-in-out infinite;
+  }
+  .sq-liquid::after {
+    right: 0;
+    background: var(--red);
+    box-shadow: 0 0 8px rgba(255, 131, 137, 0.4);
+    animation: edgePulse 2s ease-in-out infinite 0.5s;
+  }
+  @keyframes edgePulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .sq-unmined {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      var(--w04) 3px,
+      var(--w04) 4px
+    );
+    z-index: 1;
+    flex: 1;
+  }
+
+  .sq-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w60);
+    padding: 0 14px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .sq-label b {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  .sq-label-right {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  /* liquid label positioned above */
+  .sq-liquid-label {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--red);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .sq-liquid-marker {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 6px;
+    background: var(--red);
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w40);
+  }
+  .legend-sw {
+    width: 10px; height: 10px;
+    border: 1px solid var(--w25);
+    flex-shrink: 0;
+  }
+  .legend-sw.stk { background: var(--blue-mid); }
+  .legend-sw.trs { background: var(--blue-light); }
+  .legend-sw.liq { background: rgba(0,10,40,0.6); border-color: var(--red); }
+  .legend-sw.unm { background: transparent; }
+
+  /* ═══════════════════════════════════
+     WHY THIS MATTERS
+     ═══════════════════════════════════ */
+  .why-section {
+    margin-bottom: 72px;
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--w15);
+    border: 1px solid var(--w15);
+  }
+
+  .why-cell {
+    background: var(--blue-deep);
+    padding: 32px 28px;
+  }
+
+  .why-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue-light);
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .why-title {
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--w95);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .why-desc {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--w40);
+  }
+  .why-desc strong {
+    color: var(--w80);
+    font-weight: 500;
+  }
+
+  /* ═══════════════════════════════════
+     COMPARISON TABLE
+     ═══════════════════════════════════ */
+  .compare-section {
+    margin-bottom: 72px;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .compare-table th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--w40);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--w25);
+  }
+
+  .compare-table td {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--w60);
+    padding: 16px 16px;
+    border-bottom: 1px solid var(--w08);
+    vertical-align: middle;
+  }
+
+  .compare-table tr:last-child td {
+    border-bottom: 1px solid var(--w25);
+  }
+
+  .compare-table .asset-name {
+    font-weight: 600;
+    color: var(--w95);
+  }
+
+  /* Inline bar for comparison */
+  .compare-bar-wrap {
+    width: 100%;
+    max-width: 180px;
+    height: 8px;
+    background: var(--w08);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+  .compare-bar-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .fill-dcr { background: var(--white); }
+  .fill-other { background: var(--w25); }
+
+  .compare-table .highlight-row td {
+    background: var(--w04);
+  }
+  .compare-table .highlight-row .asset-name {
+    color: var(--white);
+  }
+
+  .compare-note {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w25);
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  /* ═══════════════════════════════════
+     METRICS GRID
+     ═══════════════════════════════════ */
+  .metrics-section {
+    margin-bottom: 72px;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--w15);
+    border: 1px solid var(--w15);
+  }
+
+  .metric {
+    background: var(--blue-deep);
+    padding: 32px 24px;
+  }
+
+  .metric-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--w40);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  .metric-unit {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--w40);
+  }
+
+  .metric-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w40);
+    margin-top: 8px;
+  }
+  .metric-sub .hl { color: var(--blue-light); font-weight: 500; }
+  .metric-sub .pos { color: var(--teal); }
+
+  /* ═══════════════════════════════════
+     CLOSING STATEMENT
+     ═══════════════════════════════════ */
+  .closing {
+    border-top: 1px solid var(--w15);
+    padding-top: 40px;
+    margin-bottom: 72px;
+  }
+
+  .closing p {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--w40);
+    max-width: 620px;
+  }
+  .closing strong {
+    font-weight: 600;
+    color: var(--w95);
+  }
+  .closing .acc {
+    color: var(--blue-light);
+    font-weight: 500;
+  }
+
+  /* ═══════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════ */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-left {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--w25);
+    line-height: 1.7;
+  }
+
+  .footer-right {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--w25);
+    text-transform: uppercase;
+  }
+
+  /* ═══════════════════════════════════
+     LOAD ANIMATION
+     ═══════════════════════════════════ */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeUp 0.6s ease-out forwards;
+  }
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.25s; }
+  .delay-3 { animation-delay: 0.4s; }
+  .delay-4 { animation-delay: 0.55s; }
+  .delay-5 { animation-delay: 0.7s; }
+  .delay-6 { animation-delay: 0.85s; }
+  .delay-7 { animation-delay: 1.0s; }
+  .delay-8 { animation-delay: 1.15s; }
+
+  /* ═══════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════ */
+  @media (max-width: 720px) {
+    .page { padding: 28px 20px 48px; }
+    .header { flex-direction: column; gap: 10px; margin-bottom: 56px; }
+    .header-meta { text-align: left; }
+    .hero-number { letter-spacing: -3px; }
+    .ratio-text { font-size: 20px; }
+    .ticker { gap: 16px; }
+    .why-grid { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .compare-bar-wrap { max-width: 100px; }
+    .footer { flex-direction: column; }
+  }
+
+  @media (max-width: 480px) {
+    .hero-number { font-size: 80px; letter-spacing: -2px; }
+    .hero-word { font-size: 20px; }
+    .metrics { grid-template-columns: 1fr; }
+    .ticker { flex-direction: column; gap: 8px; }
+    .ratio-block { padding: 40px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ▸ HEADER -->
+  <header class="header fade-in">
+    <div class="logo">DECRED <span class="logo-sep">/</span> <span class="logo-dim">Supply Report</span></div>
+    <div class="header-meta">
+      <span class="live-dot"></span>Live · dcrdata.decred.org<br>
+      Block #1,055,948 · Feb 20, 2026
+    </div>
+  </header>
+
+  <!-- ▸ HERO -->
+  <section class="hero fade-in delay-1">
+    <div class="hero-number">
+      <span id="heroCount">0</span><span class="hero-pct">%</span>
+    </div>
+    <div class="hero-word">Locked</div>
+    <div class="hero-sub">
+      Of 16.1M total mined supply, only 4.40M DCR is liquid.
+    </div>
+  </section>
+
+  <!-- ▸ THE RATIO -->
+  <div class="ratio-block fade-in delay-2">
+    <p class="ratio-text">
+      For every 1 DCR on the open market,
+      <strong>2.7 DCR are locked by holders</strong>
+      and strictly unavailable for sale.
+    </p>
+  </div>
+
+  <!-- ▸ TICKER -->
+  <div class="ticker fade-in delay-3">
+    <div class="ticker-item">DCR <span class="v">$23.70</span> <span class="up">▲ 7.4%</span></div>
+    <div class="ticker-item">MCap <span class="v">$409M</span></div>
+    <div class="ticker-item">Vol 24h <span class="v">$2.13M</span></div>
+    <div class="ticker-item">Liquid MCap <span class="v">$104M</span></div>
+  </div>
+
+  <!-- ▸ SQUEEZE BAR -->
+  <section class="squeeze-section fade-in delay-4">
+    <div class="section-label">21,000,000 DCR — Total Supply Allocation</div>
+    <div style="position: relative;">
+      <!-- Liquid label above the bar -->
+      <div class="sq-liquid-label" id="liquidLabel" style="left: 56%; display: none;">
+        ▼ 4.40M LIQUID
+      </div>
+      <div class="squeeze-bar">
+        <div class="sq-segment sq-staked" id="sqStaked" style="width: 0%;">
+          <span class="sq-label"><b>10.9M</b> Staked</span>
+        </div>
+        <div class="sq-segment sq-treasury" id="sqTreasury" style="width: 0%;">
+          <span class="sq-label"><b>872K</b></span>
+        </div>
+        <div class="sq-segment sq-liquid" id="sqLiquid" style="width: 0%;">
+        </div>
+        <div class="sq-segment sq-unmined" id="sqUnmined">
+          <span class="sq-label sq-label-right"><b>4.8M</b> Unmined</span>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-sw stk"></div>Staked in Tickets (67.4%)</div>
+      <div class="legend-item"><div class="legend-sw trs"></div>Treasury (5.3%)</div>
+      <div class="legend-item"><div class="legend-sw liq"></div>Liquid — Available (27.2%)</div>
+      <div class="legend-item"><div class="legend-sw unm"></div>Not Yet Mined</div>
+    </div>
+  </section>
+
+  <!-- ▸ WHY THIS MATTERS -->
+  <section class="why-section fade-in delay-5">
+    <div class="section-label">Why This Matters</div>
+    <div class="why-grid">
+      <div class="why-cell">
+        <div class="why-num">01</div>
+        <div class="why-title">Protocol-Enforced Lockup</div>
+        <div class="why-desc">
+          Staked DCR isn't a promise — it's <strong>code</strong>.
+          Tickets lock coins for up to 142 days with no early exit. This isn't voluntary holding; it's a binding protocol constraint.
+        </div>
+      </div>
+      <div class="why-cell">
+        <div class="why-num">02</div>
+        <div class="why-title">No Unlock Schedules</div>
+        <div class="why-desc">
+          Zero VC allocations. Zero team tokens vesting.
+          There was no pre-mine. Every DCR in existence was either <strong>mined or earned</strong> through stakeholder-approved work.
+        </div>
+      </div>
+      <div class="why-cell">
+        <div class="why-num">03</div>
+        <div class="why-title">Buying Pressure ≠ Selling Supply</div>
+        <div class="why-desc">
+          When 72% of supply can't be sold, even modest demand has outsized price impact.
+          The <strong>liquid market cap is $104M</strong> — not $409M.
+        </div>
+      </div>
+      <div class="why-cell">
+        <div class="why-num">04</div>
+        <div class="why-title">The Squeeze Tightens</div>
+        <div class="why-desc">
+          The ticket pool actively absorbs newly mined coins.
+          Stake participation has been <strong>trending upward for years</strong>.
+          Every ticket purchased compresses liquid supply further.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▸ COMPARISON -->
+  <section class="compare-section fade-in delay-6">
+    <div class="section-label">Protocol-Locked Supply — Cross-Chain</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th style="width:120px;">Asset</th>
+          <th style="width:90px;">Locked</th>
+          <th>Visualization</th>
+          <th style="width: 200px;">Lock Mechanism</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight-row">
+          <td class="asset-name">Decred</td>
+          <td style="color:var(--white); font-weight:700;">72.8%</td>
+          <td>
+            <div class="compare-bar-wrap">
+              <div class="compare-bar-fill fill-dcr" id="barDCR" style="width:0%"></div>
+            </div>
+          </td>
+          <td>PoS tickets + treasury. 142-day lock. No early exit.</td>
+        </tr>
+        <tr>
+          <td class="asset-name">Ethereum</td>
+          <td>28.3%</td>
+          <td>
+            <div class="compare-bar-wrap">
+              <div class="compare-bar-fill fill-other" id="barETH" style="width:0%"></div>
+            </div>
+          </td>
+          <td>Beacon chain staking. Withdrawable post-Shanghai.</td>
+        </tr>
+        <tr>
+          <td class="asset-name">Solana</td>
+          <td>65.1%</td>
+          <td>
+            <div class="compare-bar-wrap">
+              <div class="compare-bar-fill fill-other" id="barSOL" style="width:0%"></div>
+            </div>
+          </td>
+          <td>Delegated PoS. ~2-day unlock period.</td>
+        </tr>
+        <tr>
+          <td class="asset-name">Bitcoin</td>
+          <td>0%</td>
+          <td>
+            <div class="compare-bar-wrap">
+              <div class="compare-bar-fill fill-other" id="barBTC" style="width:0%"></div>
+            </div>
+          </td>
+          <td>No protocol lock. All supply is technically liquid.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="compare-note">
+      Decred's lock is the most rigid: no delegation, no liquid staking derivatives, no early withdrawal. Coins are fully inaccessible until the ticket votes or expires.
+    </div>
+  </section>
+
+  <!-- ▸ NETWORK FUNDAMENTALS -->
+  <section class="metrics-section fade-in delay-7">
+    <div class="section-label">Network Fundamentals</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Stake Participation</div>
+        <div class="metric-val">67.4<span class="metric-unit">%</span></div>
+        <div class="metric-sub">10.9M DCR locked</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Treasury Runway</div>
+        <div class="metric-val">38<span class="metric-unit"> mo</span></div>
+        <div class="metric-sub">872.4K DCR · <span class="hl">$20.7M</span></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ticket Pool</div>
+        <div class="metric-val">40,712</div>
+        <div class="metric-sub">Target: 40,960 · <span class="pos">99%</span></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Privacy Mix</div>
+        <div class="metric-val">62.5<span class="metric-unit">%</span></div>
+        <div class="metric-sub">StakeShuffle active</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▸ CLOSING -->
+  <section class="closing fade-in delay-8">
+    <p>
+      <strong>67% of all mined DCR is locked</strong> and cannot be sold without a 142-day
+      unbonding period. The liquid supply is <span class="acc">27.2% of mined coins</span>
+      — and shrinking with every ticket purchased.
+    </p>
+  </section>
+
+  <!-- ▸ FOOTER -->
+  <footer class="footer fade-in delay-8">
+    <div class="footer-left">
+      Data: dcrdata.decred.org · CoinGecko<br>
+      Updated: 8s ago
+    </div>
+    <div class="footer-right">No VCs. No pre-mine. Just code.</div>
+  </footer>
+
+</div>
+
+<script>
+// ── Hero counter: 0 → 72 ──
+(function() {
+  const el = document.getElementById('heroCount');
+  const target = 72;
+  const duration = 1800;
+  const start = performance.now();
+
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    el.textContent = Math.round(target * ease);
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  // slight delay so the user sees the page first
+  setTimeout(() => requestAnimationFrame(tick), 400);
+})();
+
+// ── Squeeze bar animation ──
+(function() {
+  const staked = document.getElementById('sqStaked');
+  const treasury = document.getElementById('sqTreasury');
+  const liquid = document.getElementById('sqLiquid');
+  const label = document.getElementById('liquidLabel');
+
+  setTimeout(() => {
+    staked.style.width = '51.9%';
+    treasury.style.width = '4.15%';
+    liquid.style.width = '22.0%';
+    label.style.display = 'block';
+    label.style.animation = 'fadeUp 0.4s ease-out forwards';
+    label.style.animationDelay = '1.2s';
+    label.style.opacity = '0';
+  }, 800);
+})();
+
+// ── Comparison bars ──
+(function() {
+  setTimeout(() => {
+    document.getElementById('barDCR').style.width = '72.8%';
+    document.getElementById('barETH').style.width = '28.3%';
+    document.getElementById('barSOL').style.width = '65.1%';
+    document.getElementById('barBTC').style.width = '0%';
+  }, 1200);
+})();
+</script>
+</body>
+</html>

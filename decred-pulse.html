@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DECRED PULSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --teal: #2ED8A3;
+    --teal-dim: rgba(46, 216, 163, 0.35);
+    --teal-ghost: rgba(46, 216, 163, 0.08);
+    --teal-glow: rgba(46, 216, 163, 0.15);
+    --bg-deep: #040B14;
+    --bg-mid: #071018;
+    --text-primary: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.45);
+    --text-dim: rgba(255, 255, 255, 0.2);
+    --red: #E85A5A;
+    --gold: #D4A843;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg-deep);
+    font-family: 'Chakra Petch', sans-serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Full-screen background layers ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 45%, rgba(46, 216, 163, 0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 120% 80% at 50% 50%, rgba(10, 30, 50, 1) 0%, var(--bg-deep) 70%);
+    z-index: 0;
+  }
+
+  /* subtle vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, rgba(0,0,0,0.5) 100%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  canvas#particles {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* ── Main layout ── */
+  .container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Top branding ── */
+  .brand {
+    position: fixed;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.35em;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .brand strong {
+    color: var(--teal);
+    font-weight: 400;
+  }
+  .brand .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal), 0 0 12px var(--teal-dim);
+    animation: dotPulse 3s ease-in-out infinite;
+  }
+  @keyframes dotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── The Core — rings + glow ── */
+  .core-wrapper {
+    position: relative;
+    width: 420px;
+    height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Ambient glow behind everything */
+  .core-glow {
+    position: absolute;
+    width: 340px; height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(46, 216, 163, 0.10) 0%,
+      rgba(46, 216, 163, 0.04) 40%,
+      transparent 70%
+    );
+    animation: breathe 6s ease-in-out infinite;
+    filter: blur(20px);
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.7; }
+  }
+
+  /* Rings */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid;
+  }
+
+  .ring-outer {
+    width: 400px; height: 400px;
+    border-color: rgba(46, 216, 163, 0.07);
+    animation: rotateRing 120s linear infinite;
+  }
+  .ring-outer::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 50%;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+    transform: translateX(-50%);
+  }
+
+  .ring-mid {
+    width: 320px; height: 320px;
+    border-color: rgba(46, 216, 163, 0.12);
+    animation: rotateRing 80s linear infinite reverse;
+  }
+  .ring-mid::before {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 50%;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+    transform: translateX(-50%);
+  }
+
+  .ring-inner {
+    width: 240px; height: 240px;
+    border-color: rgba(46, 216, 163, 0.18);
+    box-shadow:
+      0 0 30px rgba(46, 216, 163, 0.03),
+      inset 0 0 30px rgba(46, 216, 163, 0.03);
+    animation: rotateRing 60s linear infinite;
+  }
+
+  @keyframes rotateRing {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Heartbeat ring — pulses with "blocks" */
+  .heartbeat-ring {
+    position: absolute;
+    width: 240px; height: 240px;
+    border-radius: 50%;
+    border: 1px solid rgba(46, 216, 163, 0.3);
+    opacity: 0;
+    animation: heartbeat 5s ease-out infinite;
+  }
+  @keyframes heartbeat {
+    0% { transform: scale(1); opacity: 0.5; border-color: rgba(46, 216, 163, 0.4); }
+    100% { transform: scale(1.8); opacity: 0; border-color: rgba(46, 216, 163, 0); }
+  }
+  .heartbeat-ring:nth-child(2) { animation-delay: 2.5s; }
+
+  /* ── Data content inside core ── */
+  .core-data {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+
+  .label-power {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .score {
+    font-size: 96px;
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -2px;
+    color: var(--text-primary);
+    text-shadow:
+      0 0 40px rgba(46, 216, 163, 0.2),
+      0 0 80px rgba(46, 216, 163, 0.08);
+    position: relative;
+  }
+
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 14px;
+    border: 1px solid rgba(46, 216, 163, 0.3);
+    border-radius: 2px;
+    background: rgba(46, 216, 163, 0.06);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--teal);
+    text-transform: uppercase;
+  }
+  .tier-badge::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+  }
+
+  .flavor {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    font-style: italic;
+    max-width: 280px;
+  }
+
+  .price-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .price {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+  }
+  .price-change {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--red);
+  }
+  .price-change.up { color: var(--teal); }
+
+  /* ── Stats row ── */
+  .stats-row {
+    margin-top: 32px;
+    display: flex;
+    gap: 64px;
+    align-items: flex-start;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+  }
+
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stakeholders {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .block-info {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+
+  .tagline {
+    margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: rgba(46, 216, 163, 0.25);
+    text-transform: uppercase;
+  }
+
+  /* ── Scan line overlay for texture ── */
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .core-wrapper { width: 300px; height: 300px; }
+    .ring-outer { width: 290px; height: 290px; }
+    .ring-mid { width: 230px; height: 230px; }
+    .ring-inner { width: 170px; height: 170px; }
+    .heartbeat-ring { width: 170px; height: 170px; }
+    .core-glow { width: 240px; height: 240px; }
+    .score { font-size: 64px; }
+    .stats-row { gap: 36px; }
+    .stat-value { font-size: 24px; }
+    .price { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="scanlines"></div>
+
+<div class="brand">
+  DECRED <strong>PULSE</strong> <span class="dot"></span>
+</div>
+
+<div class="container">
+  <div class="core-wrapper">
+    <div class="core-glow"></div>
+    <div class="ring ring-outer"></div>
+    <div class="ring ring-mid"></div>
+    <div class="ring ring-inner"></div>
+    <div class="heartbeat-ring"></div>
+    <div class="heartbeat-ring"></div>
+
+    <div class="core-data">
+      <div class="label-power">Power Level</div>
+      <div class="score">87</div>
+      <div class="tier-badge">Fortified</div>
+      <div class="flavor">The treasury builds. The stakeholders decide.</div>
+      <div class="price-row">
+        <span class="price">$22.87</span>
+        <span class="price-change">▼ 3.5%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-value">67.5%</div>
+      <div class="stat-label">Conviction Locked</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">38mo</div>
+      <div class="stat-label">War Chest</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">62.5%</div>
+      <div class="stat-label">Privacy Mix</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="stakeholders">41K Stakeholders on Watch</div>
+  <div class="block-info">◈ Block #1,054,831 · 1m ago · ~5 min avg</div>
+  <div class="tagline">No VCs. No pre-mine. Just code.</div>
+</div>
+
+<script>
+// ── Particle system ──
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Particle types:
+// 1. Ambient drift — slow, faint, everywhere
+// 2. Inward flow — streams toward center (stake participation)
+// 3. Orbital — small dots orbiting center (tickets)
+
+class Particle {
+  constructor(type) {
+    this.type = type;
+    this.reset();
+  }
+
+  reset() {
+    if (this.type === 'ambient') {
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.vx = (Math.random() - 0.5) * 0.15;
+      this.vy = (Math.random() - 0.5) * 0.15;
+      this.size = Math.random() * 1.2 + 0.3;
+      this.alpha = Math.random() * 0.15 + 0.03;
+      this.life = Math.random() * 400 + 200;
+      this.maxLife = this.life;
+
+    } else if (this.type === 'flow') {
+      // spawn on edges, flow toward center
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.max(W, H) * 0.5 + Math.random() * 100;
+      this.x = cx + Math.cos(angle) * dist;
+      this.y = cy + Math.sin(angle) * dist;
+      this.size = Math.random() * 1.0 + 0.4;
+      this.alpha = 0;
+      this.maxAlpha = Math.random() * 0.25 + 0.08;
+      this.speed = Math.random() * 0.3 + 0.15;
+      this.life = 600;
+      this.maxLife = this.life;
+
+    } else if (this.type === 'orbital') {
+      this.angle = Math.random() * Math.PI * 2;
+      this.radius = 140 + Math.random() * 30; // orbit around the mid ring area
+      this.speed = (Math.random() * 0.001 + 0.0005) * (Math.random() > 0.5 ? 1 : -1);
+      this.size = Math.random() * 1.0 + 0.5;
+      this.alpha = Math.random() * 0.3 + 0.1;
+      this.wobble = Math.random() * Math.PI * 2;
+      this.wobbleSpeed = Math.random() * 0.005 + 0.002;
+      this.wobbleAmt = Math.random() * 8 + 2;
+    }
+  }
+
+  update() {
+    if (this.type === 'ambient') {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life--;
+      if (this.life <= 0 || this.x < -10 || this.x > W + 10 || this.y < -10 || this.y > H + 10) {
+        this.reset();
+      }
+
+    } else if (this.type === 'flow') {
+      const dx = cx - this.x;
+      const dy = cy - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > 5) {
+        this.x += (dx / dist) * this.speed;
+        this.y += (dy / dist) * this.speed;
+        // slight perpendicular drift for organic feel
+        this.x += (-dy / dist) * this.speed * 0.15;
+        this.y += (dx / dist) * this.speed * 0.15;
+      }
+
+      // fade in at edges, fade out near center
+      const normDist = dist / (Math.max(W, H) * 0.5);
+      if (normDist > 0.7) {
+        this.alpha = this.maxAlpha * (1 - (normDist - 0.7) / 0.3);
+      } else if (normDist < 0.15) {
+        this.alpha = this.maxAlpha * (normDist / 0.15);
+      } else {
+        this.alpha = this.maxAlpha;
+      }
+
+      this.life--;
+      if (this.life <= 0 || dist < 30) this.reset();
+
+    } else if (this.type === 'orbital') {
+      this.angle += this.speed;
+      this.wobble += this.wobbleSpeed;
+      const r = this.radius + Math.sin(this.wobble) * this.wobbleAmt;
+      this.x = cx + Math.cos(this.angle) * r;
+      this.y = cy + Math.sin(this.angle) * r;
+    }
+  }
+
+  draw() {
+    const a = this.type === 'ambient'
+      ? this.alpha * (this.life / this.maxLife)
+      : this.type === 'orbital'
+        ? this.alpha
+        : this.alpha;
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(46, 216, 163, ${a})`;
+    ctx.fill();
+
+    // glow for orbital and brighter flow particles
+    if ((this.type === 'orbital' || this.type === 'flow') && a > 0.1) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(46, 216, 163, ${a * 0.15})`;
+      ctx.fill();
+    }
+  }
+}
+
+// Create particles
+const particles = [];
+for (let i = 0; i < 80; i++) particles.push(new Particle('ambient'));
+for (let i = 0; i < 40; i++) particles.push(new Particle('flow'));
+for (let i = 0; i < 50; i++) particles.push(new Particle('orbital'));
+
+function animate() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Use screen blending for additive glow effect
+  ctx.globalCompositeOperation = 'screen';
+
+  for (const p of particles) {
+    p.update();
+    p.draw();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+// ── Heartbeat pulse — trigger a visual "block found" every ~5s ──
+// The CSS handles the ring animation, but we also briefly flash the score
+const scoreEl = document.querySelector('.score');
+setInterval(() => {
+  scoreEl.style.textShadow = '0 0 60px rgba(46, 216, 163, 0.5), 0 0 120px rgba(46, 216, 163, 0.2)';
+  setTimeout(() => {
+    scoreEl.style.textShadow = '0 0 40px rgba(46, 216, 163, 0.2), 0 0 80px rgba(46, 216, 163, 0.08)';
+  }, 300);
+}, 5000);
+</script>
+</body>
+</html>

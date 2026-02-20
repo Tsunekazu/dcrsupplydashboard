@@ -21,8 +21,10 @@ export interface DecredData {
   networkScore: number;
   lastUpdated: number;
   isLive: boolean;
+  totalSupply: number;
+  unminedSupply: number;
+  liquidSupply: number;
 }
-
 const FALLBACK: DecredData = {
   blockHeight: 841_250,
   blockTime: Date.now() / 1000,
@@ -43,7 +45,46 @@ const FALLBACK: DecredData = {
   networkScore: 78,
   lastUpdated: Date.now(),
   isLive: false,
+  totalSupply: 21_000_000,
+  unminedSupply: 4_850_000,
+  liquidSupply: 4_994_000,
 };
+
+interface BestBlockResponse {
+  height?: number;
+  time?: number;
+  block?: {
+    height?: number;
+    time?: number;
+  };
+}
+
+interface StakePoolResponse {
+  size?: number;
+  pool_size?: number;
+  value?: number;
+  pool_value?: number;
+  target?: number;
+}
+
+interface SupplyResponseObject {
+  supply_total?: number;
+  coin_supply?: number;
+  mixed_percent?: number;
+}
+
+type SupplyResponse = number | SupplyResponseObject;
+
+type TreasuryBalanceResponse = number | { balance?: number; total?: number };
+
+interface CoinGeckoPriceResponse {
+  decred?: {
+    usd?: number;
+    usd_24h_change?: number;
+    usd_market_cap?: number;
+    usd_24h_vol?: number;
+  };
+}
 
 async function safeFetch<T>(url: string, timeoutMs = 8000): Promise<T | null> {
   try {
@@ -58,62 +99,74 @@ async function safeFetch<T>(url: string, timeoutMs = 8000): Promise<T | null> {
   }
 }
 
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function calculateNetworkScore(data: Partial<DecredData>): number {
   let score = 0;
-  let weights = 0;
+  let totalWeight = 0;
 
-  // Stake participation (target ~50%+ is healthy)
-  if (data.stakeParticipation) {
-    const stakeScore = Math.min(data.stakeParticipation / 65, 1) * 100;
-    score += stakeScore * 30;
-    weights += 30;
+  // 1. Consensus Stability (30%)
+  // Blueprint: Hashrate > 30-day MA; VSP Uptime > 99.9%
+  // Heuristic: Hashrate > 80 PH/s (approx 30d avg) -> 100.
+  if (data.hashrate) {
+    const health = Math.min(data.hashrate / 80e15, 1); // 80 PH/s target
+    score += (health * 100) * 0.30;
+    totalWeight += 0.30;
   }
 
-  // Ticket pool health (close to target = good)
+  // 2. Governance Participation (30%)
+  // Blueprint: Pool > 40,960; Turnout > 50%
   if (data.ticketPoolSize && data.ticketPoolTarget) {
-    const poolRatio = data.ticketPoolSize / data.ticketPoolTarget;
-    const poolScore = Math.max(0, 100 - Math.abs(1 - poolRatio) * 200);
-    score += poolScore * 20;
-    weights += 20;
+    const ratio = data.ticketPoolSize / data.ticketPoolTarget; // Target ~40960
+    // 0.95 - 1.05 is healthy zone
+    const gap = Math.abs(1 - ratio);
+    // If gap is < 0.05, score 100. If gap > 0.2, score drops.
+    const govScore = Math.max(0, 100 - (Math.max(0, gap - 0.05) * 400));
+    score += govScore * 0.30;
+    totalWeight += 0.30;
   }
 
-  // Treasury health (more is better, up to a point)
+  // 3. Treasury Liquidity (20%)
+  // Blueprint: > 12 months runway
   if (data.treasuryBalance) {
-    const treasuryScore = Math.min(data.treasuryBalance / 1_000_000, 1) * 100;
-    score += treasuryScore * 15;
-    weights += 15;
+    const burnRate = data.treasuryMonthlyBurn || 25000; // Fallback burn
+    const runwayMonths = data.treasuryBalance / burnRate;
+    const treasuryScore = Math.min(runwayMonths / 24, 1) * 100; // 24mo runway = 100%
+    score += treasuryScore * 0.20;
+    totalWeight += 0.20;
   }
 
-  // Mixing participation
-  if (data.mixedPercent) {
-    const mixScore = Math.min(data.mixedPercent / 70, 1) * 100;
-    score += mixScore * 15;
-    weights += 15;
+  // 4. DEX Liquidity Depth (20%)
+  // Blueprint: Bid/Ask < 1%; Volume > $X
+  // Proxy: Volume24h relative to MarketCap. Healthy > 0.5% turnover?
+  // Or just check if price exists and is non-zero (simple liveness).
+  if (data.volume24h && data.marketCap) {
+    const turnover = data.volume24h / data.marketCap;
+    // 0.2% daily turnover is decent for stored value.
+    const dexScore = Math.min(turnover / 0.002, 1) * 100;
+    score += Math.max(dexScore, 85) * 0.20; // Floor at 85 for now as DEX API isn't fully integrated
+    totalWeight += 0.20;
   }
 
-  // Price momentum
-  if (data.priceChange24h !== undefined) {
-    const momentumScore = 50 + Math.max(-50, Math.min(50, data.priceChange24h * 5));
-    score += momentumScore * 10;
-    weights += 10;
-  }
-
-  // Hashrate (existence = healthy)
-  if (data.hashrate && data.hashrate > 0) {
-    score += 80 * 10;
-    weights += 10;
-  }
-
-  return weights > 0 ? Math.round(score / weights) : 50;
+  return totalWeight > 0 ? Math.round(score / totalWeight) : 60;
 }
 
 export async function fetchDecredData(): Promise<DecredData> {
   const [bestBlock, stakeInfo, supply, treasuryBal, priceData] = await Promise.all([
-    safeFetch<any>(`${DCRDATA_BASE}/block/best`),
-    safeFetch<any>(`${DCRDATA_BASE}/stake/pool`),
-    safeFetch<any>(`${DCRDATA_BASE}/supply`),
-    safeFetch<any>(`${DCRDATA_BASE}/treasury/balance`),
-    safeFetch<any>(`${COINGECKO_BASE}/simple/price?ids=decred&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`),
+    safeFetch<BestBlockResponse>(`${DCRDATA_BASE}/block/best`),
+    safeFetch<StakePoolResponse>(`${DCRDATA_BASE}/stake/pool`),
+    safeFetch<SupplyResponse>(`${DCRDATA_BASE}/supply`),
+    safeFetch<TreasuryBalanceResponse>(`${DCRDATA_BASE}/treasury/balance`),
+    safeFetch<CoinGeckoPriceResponse>(`${COINGECKO_BASE}/simple/price?ids=decred&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`),
   ]);
 
   let anyLive = false;
@@ -121,27 +174,29 @@ export async function fetchDecredData(): Promise<DecredData> {
 
   if (bestBlock) {
     anyLive = true;
-    data.blockHeight = bestBlock.height ?? bestBlock.block?.height ?? data.blockHeight;
-    data.blockTime = bestBlock.time ?? bestBlock.block?.time ?? data.blockTime;
+    const bestHeight = toNumber(bestBlock.height) ?? toNumber(bestBlock.block?.height);
+    const bestTime = toNumber(bestBlock.time) ?? toNumber(bestBlock.block?.time);
+    data.blockHeight = bestHeight ?? data.blockHeight;
+    data.blockTime = bestTime ?? data.blockTime;
   }
 
   if (stakeInfo) {
     anyLive = true;
-    // dcrdata /stake/pool returns: { size, value, target, ... } or similar shape
-    if (typeof stakeInfo === 'object') {
-      data.ticketPoolSize = stakeInfo.size ?? stakeInfo.pool_size ?? data.ticketPoolSize;
-      data.ticketPoolValue = stakeInfo.value ?? stakeInfo.pool_value ?? data.ticketPoolValue;
-      data.ticketPoolTarget = stakeInfo.target ?? data.ticketPoolTarget;
-    }
+    data.ticketPoolSize = toNumber(stakeInfo.size) ?? toNumber(stakeInfo.pool_size) ?? data.ticketPoolSize;
+    data.ticketPoolValue = toNumber(stakeInfo.value) ?? toNumber(stakeInfo.pool_value) ?? data.ticketPoolValue;
+    data.ticketPoolTarget = toNumber(stakeInfo.target) ?? data.ticketPoolTarget;
   }
 
   if (supply) {
     anyLive = true;
     if (typeof supply === 'number') {
       data.coinSupply = supply / 1e8; // atoms to DCR
-    } else if (typeof supply === 'object') {
-      data.coinSupply = (supply.supply_total ?? supply.coin_supply ?? 0) / 1e8 || data.coinSupply;
-      data.mixedPercent = supply.mixed_percent ?? data.mixedPercent;
+    } else {
+      const totalSupplyAtoms = toNumber(supply.supply_total) ?? toNumber(supply.coin_supply);
+      if (totalSupplyAtoms !== null) {
+        data.coinSupply = totalSupplyAtoms / 1e8;
+      }
+      data.mixedPercent = toNumber(supply.mixed_percent) ?? data.mixedPercent;
     }
   }
 
@@ -154,18 +209,25 @@ export async function fetchDecredData(): Promise<DecredData> {
     anyLive = true;
     if (typeof treasuryBal === 'number') {
       data.treasuryBalance = treasuryBal / 1e8;
-    } else if (typeof treasuryBal === 'object') {
-      data.treasuryBalance = (treasuryBal.balance ?? treasuryBal.total ?? 0) / 1e8 || data.treasuryBalance;
+    } else {
+      const treasuryAtoms = toNumber(treasuryBal.balance) ?? toNumber(treasuryBal.total);
+      if (treasuryAtoms !== null) {
+        data.treasuryBalance = treasuryAtoms / 1e8;
+      }
     }
   }
 
   if (priceData?.decred) {
     anyLive = true;
-    data.price = priceData.decred.usd ?? data.price;
-    data.priceChange24h = priceData.decred.usd_24h_change ?? data.priceChange24h;
-    data.marketCap = priceData.decred.usd_market_cap ?? data.marketCap;
-    data.volume24h = priceData.decred.usd_24h_vol ?? data.volume24h;
+    data.price = toNumber(priceData.decred.usd) ?? data.price;
+    data.priceChange24h = toNumber(priceData.decred.usd_24h_change) ?? data.priceChange24h;
+    data.marketCap = toNumber(priceData.decred.usd_market_cap) ?? data.marketCap;
+    data.volume24h = toNumber(priceData.decred.usd_24h_vol) ?? data.volume24h;
   }
+
+  data.totalSupply = 21_000_000;
+  data.unminedSupply = Math.max(0, data.totalSupply - data.coinSupply);
+  data.liquidSupply = Math.max(0, data.coinSupply - data.ticketPoolValue - data.treasuryBalance);
 
   data.isLive = anyLive;
   data.networkScore = calculateNetworkScore(data);

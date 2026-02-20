@@ -1,398 +1,379 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useDecredData } from './hooks/useDecredData';
-import { Organism } from './organism/Organism';
-import { formatDCR, formatHashrate, formatUSD, timeSince } from './api/dcrdata';
+import { formatUSD } from './api/dcrdata';
+import './index.css';
 
 function App() {
-  const { data, newBlock } = useDecredData();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const organismRef = useRef<Organism | null>(null);
-  const [showHUD, setShowHUD] = useState(false);
-  const [blockToast, setBlockToast] = useState(false);
-  const [blockAge, setBlockAge] = useState('');
+  const { data, loading, error, newBlock } = useDecredData();
+  const [displayPct, setDisplayPct] = useState(0);
+  const [animTrigger, setAnimTrigger] = useState(false);
 
-  // Initialize organism
+  // Derived metrics
+  const totalMined = data?.coinSupply || 0;
+  const totalLocked = (data?.ticketPoolValue || 0) + (data?.treasuryBalance || 0);
+  const lockedPctOfMined = totalMined > 0 ? (totalLocked / totalMined) * 100 : 0;
+  const lockedRatio = (data && data.liquidSupply && data.liquidSupply > 0) ? (totalLocked / data.liquidSupply).toFixed(1) : '0.0';
+
+  // Emission reduction calculation (every 6144 blocks, approx 21.33 days)
+  const nextReductionBlock = Math.ceil((data?.blockHeight || 1) / 6144) * 6144;
+  const blocksToReduction = nextReductionBlock - (data?.blockHeight || 0);
+  const minutesToReduction = blocksToReduction * 5;
+  const daysToReduction = Math.floor(minutesToReduction / (24 * 60));
+  const hoursToReduction = Math.floor((minutesToReduction % (24 * 60)) / 60);
+
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const org = new Organism(canvasRef.current);
-    organismRef.current = org;
-    org.start();
+    if (data?.isLive) {
+      // Trigger CSS transition animations
+      const t = setTimeout(() => {
+        setAnimTrigger(true);
 
-    const onResize = () => org.resize();
-    const onMouse = (e: MouseEvent) => org.setMouse(e.clientX, e.clientY);
-    window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', onMouse);
+        // Counter animation for the massive hero number
+        const duration = 1800;
+        const steps = 60;
+        const stepTime = duration / steps;
+        let currentStep = 0;
+        const targetPct = lockedPctOfMined;
 
-    return () => {
-      org.stop();
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('mousemove', onMouse);
-    };
-  }, []);
+        const counter = setInterval(() => {
+          currentStep++;
+          const progress = currentStep / steps;
+          const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic matches HTML
+          setDisplayPct(easeProgress * targetPct);
 
-  // Feed data to organism
-  useEffect(() => {
-    if (data && organismRef.current) {
-      organismRef.current.setData(data);
+          if (currentStep >= steps) clearInterval(counter);
+        }, stepTime);
+
+      }, 400);
+      return () => clearTimeout(t);
     }
-  }, [data]);
+  }, [data?.isLive, lockedPctOfMined]);
 
-  // Keyboard shortcut: I for detail HUD
-  const toggleHUD = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'i' || e.key === 'I') {
-      setShowHUD(prev => !prev);
-    }
-  }, []);
+  if (error) {
+    return <div className="page" style={{ color: 'var(--red)' }}>Error: {error}</div>;
+  }
 
-  useEffect(() => {
-    window.addEventListener('keydown', toggleHUD);
-    return () => window.removeEventListener('keydown', toggleHUD);
-  }, [toggleHUD]);
+  if (loading || !data?.isLive) {
+    return <div className="page" style={{ opacity: 0.5 }}>Connecting to Decred Network...</div>;
+  }
 
-  // New block toast
-  useEffect(() => {
-    if (newBlock) {
-      setBlockToast(true);
-      const timer = setTimeout(() => setBlockToast(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [newBlock]);
+  // Formatting for display
+  const liquidDisplay = (data.liquidSupply / 1_000_000).toFixed(2);
+  const totalMinedDisplay = (totalMined / 1_000_000).toFixed(1);
 
-  // Live block age counter — ticks every second
-  useEffect(() => {
-    if (!data?.blockTime) return;
-    const tick = () => setBlockAge(timeSince(data.blockTime));
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [data?.blockTime]);
-
-  // Derived narrative
-  const n = useMemo(() => {
-    if (!data) return null;
-
-    const monthsRunway = data.treasuryMonthlyBurn > 0
-      ? Math.floor(data.treasuryBalance / data.treasuryMonthlyBurn)
-      : 999;
-
-    const scoreLabel =
-      data.networkScore >= 90 ? 'SOVEREIGN' :
-        data.networkScore >= 75 ? 'FORTIFIED' :
-          data.networkScore >= 60 ? 'HARDENED' :
-            data.networkScore >= 40 ? 'STACKING' :
-              'SIGNAL';
-
-    const scoreColor =
-      data.networkScore >= 90 ? '#f0b040' :
-        data.networkScore >= 75 ? '#3bf0c0' :
-          data.networkScore >= 60 ? '#2ed6a1' :
-            data.networkScore >= 40 ? '#06b6d4' :
-              '#ef4444';
-
-    const scoreFlavor =
-      data.networkScore >= 90 ? 'Self-funded. Self-governed. Not asking permission.' :
-        data.networkScore >= 75 ? 'The treasury builds. The stakeholders decide. No one else matters.' :
-          data.networkScore >= 60 ? 'Quietly compounding. The infrastructure doesn\'t sleep.' :
-            data.networkScore >= 40 ? 'Still here. Still building. Most projects can\'t say that.' :
-              'Maximum opportunity. The protocol has survived worse.';
-
-    // Ring health metrics (0-1 range for CSS)
-    const treasuryHealth = Math.min(data.treasuryBalance / 1_000_000, 1);
-    const stakeHealth = Math.min(data.stakeParticipation / 70, 1);
-    const hashrateHealth = data.hashrate > 0 ? 0.8 : 0.2;
-
-    return {
-      price: data.price,
-      priceChange: data.priceChange24h,
-      score: data.networkScore,
-      scoreLabel,
-      scoreColor,
-      scoreFlavor,
-      stakePercent: data.stakeParticipation.toFixed(1),
-      monthsRunway,
-      treasuryDCR: formatDCR(data.treasuryBalance, 0),
-      treasuryUSD: formatUSD(data.treasuryBalance * data.price),
-      blockHeight: data.blockHeight,
-      blockTime: data.blockTime,
-      isLive: data.isLive,
-      ticketPrice: data.ticketPrice.toFixed(2),
-      poolSize: data.ticketPoolSize.toLocaleString(),
-      poolSizeRaw: data.ticketPoolSize,
-      hashrate: formatHashrate(data.hashrate),
-      marketCap: formatUSD(data.marketCap),
-      volume: formatUSD(data.volume24h),
-      mixedPercent: data.mixedPercent.toFixed(1),
-      treasuryHealth,
-      stakeHealth,
-      hashrateHealth,
-    };
-  }, [data]);
+  // Squeeze Bar percentages (relative to total 21M supply)
+  const stakedPct = (data.ticketPoolValue / data.totalSupply) * 100;
+  const treasuryPct = (data.treasuryBalance / data.totalSupply) * 100;
+  const liquidPct = (data.liquidSupply / data.totalSupply) * 100;
+  // Unmined fills the rest
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
-      {/* Living background */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
-        style={{ background: '#020610' }}
-      />
+    <div className="page">
+      {/* ▸ HEADER */}
+      <header className="header fade-in">
+        <div className="logo">DECRED <span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
+        <div className="header-meta">
+          <span className="live-dot"></span>Live &middot; dcrdata.decred.org<br />
+          Block #{data.blockHeight.toLocaleString()} &middot; {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+      </header>
 
-      {/* CSS visual structure layer — data-responsive */}
-      <div
-        className="absolute inset-0 pointer-events-none overflow-hidden"
-        style={n ? {
-          '--ring-treasury': n.treasuryHealth,
-          '--ring-stake': n.stakeHealth,
-          '--ring-hashrate': n.hashrateHealth,
-        } as React.CSSProperties : undefined}
-      >
-        {/* Nebula atmospheric glow */}
-        <div className="nebula-glow" />
-        <div className="nebula-accent" />
+      {/* ▸ HERO */}
+      <section className="hero fade-in delay-1">
+        <div className={`hero-number ${newBlock ? 'glitch-anim' : ''}`}>
+          <span>{displayPct.toFixed(1)}</span><span className="hero-pct">%</span>
+        </div>
+        <div className="hero-word">Locked</div>
+        <div className="hero-sub">
+          Of {totalMinedDisplay}M total mined supply, only {liquidDisplay}M DCR is liquid.
+        </div>
+      </section>
 
-        {/* Orbit rings — inner=treasury, middle=stake, outer=hashrate */}
-        <div className="orbit-ring orbit-ring--1" />
-        <div className="orbit-ring orbit-ring--2" />
-        <div className="orbit-ring orbit-ring--3" />
-
-        {/* Core reactor glow */}
-        <div className="core-glow" />
+      {/* ▸ THE RATIO */}
+      <div className="ratio-block fade-in delay-2">
+        <p className="ratio-text">
+          For every 1 DCR on the open market,<br />
+          <strong>{lockedRatio} DCR are locked by holders</strong><br />
+          and strictly unavailable for sale.
+        </p>
       </div>
 
-      {/* Cinematic overlay */}
-      <AnimatePresence>
-        {n && (
-          <div className="absolute inset-0 pointer-events-none select-none">
+      {/* ▸ TICKER */}
+      <div className="ticker fade-in delay-3">
+        <div className="ticker-item">DCR <span className="v">{formatUSD(data.price)}</span></div>
+        <div className="ticker-item">MCap <span className="v">${(data.marketCap / 1000000).toFixed(0)}M</span></div>
+        <div className="ticker-item">Vol 24h <span className="v">${(data.volume24h / 1000000).toFixed(2)}M</span></div>
+        <div className="ticker-item">Liquid MCap <span className="v">${((data.liquidSupply * data.price) / 1000000).toFixed(0)}M</span></div>
+        <div className="ticker-item">Next Emission Drop <span className="v">{daysToReduction}d {hoursToReduction}h</span></div>
+      </div>
 
-            {/* ── TOP: Wordmark + Live ─────────────────── */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 1 }}
-              className="absolute top-5 left-0 right-0 flex items-center justify-center gap-3"
-            >
-              <span className="animate-glitch text-[11px] tracking-[0.4em] uppercase font-bold text-white/30">
-                Decred
-              </span>
-              <span className="text-[11px] tracking-[0.4em] uppercase font-bold glow-text" style={{ color: 'rgba(59, 240, 192, 0.7)' }}>
-                Pulse
-              </span>
-              {n.isLive && (
-                <div className="w-[6px] h-[6px] rounded-full bg-green-400 animate-live-pulse" />
-              )}
-            </motion.div>
-
-            {/* ── CENTER: Score + Price + Stats ────────── */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {/* Label above score */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
-                className="text-[10px] tracking-[0.3em] uppercase font-bold text-white/30 mb-2"
-              >
-                Power Level
-              </motion.div>
-
-              {/* Score number */}
-              <div className="animate-score-reveal mb-1">
-                <div
-                  className="score-number text-[120px] leading-none text-center"
-                  data-score={n.score}
-                  style={{
-                    WebkitTextStroke: `2px ${n.scoreColor}50`,
-                  }}
-                >
-                  {n.score}
-                </div>
-              </div>
-
-              {/* Score status badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8, duration: 0.6 }}
-              >
-                <span
-                  className="badge glow-text"
-                  style={{
-                    borderColor: `${n.scoreColor}40`,
-                    background: `${n.scoreColor}12`,
-                    color: n.scoreColor,
-                  }}
-                >
-                  <span className="w-[5px] h-[5px] rounded-full" style={{ background: n.scoreColor }} />
-                  {n.scoreLabel}
-                </span>
-              </motion.div>
-
-              {/* Flavor text */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.9, duration: 0.8 }}
-                className="text-[11px] text-white/25 mt-2 italic tracking-wide"
-              >
-                {n.scoreFlavor}
-              </motion.div>
-
-              {/* Price */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1, duration: 0.8 }}
-                className="mt-5 flex items-baseline gap-3"
-              >
-                <span className="text-[32px] font-bold text-white/85 glow-text" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  ${n.price.toFixed(2)}
-                </span>
-                <span
-                  className="text-sm font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    color: n.priceChange >= 0 ? '#22c55e' : '#ef4444',
-                    background: n.priceChange >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                  }}
-                >
-                  {n.priceChange >= 0 ? '▲' : '▼'} {Math.abs(n.priceChange).toFixed(1)}%
-                </span>
-              </motion.div>
-
-              {/* Key stats row — centered below price */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.3, duration: 0.8 }}
-                className="mt-8 flex items-start gap-16"
-              >
-                {/* Conviction metric */}
-                <div className="text-center">
-                  <div className="text-[24px] font-black text-white/85 glow-text-strong" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {n.stakePercent}%
-                  </div>
-                  <div className="text-[9px] tracking-[0.2em] uppercase font-bold text-white/35 mt-1">
-                    Conviction Locked
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-10 bg-white/10 mt-1" />
-
-                {/* War chest */}
-                <div className="text-center">
-                  <div className="text-[24px] font-black text-white/85 glow-text-gold" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {n.monthsRunway}mo
-                  </div>
-                  <div className="text-[9px] tracking-[0.2em] uppercase font-bold text-white/35 mt-1">
-                    War Chest
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-10 bg-white/10 mt-1" />
-
-                {/* Privacy */}
-                <div className="text-center">
-                  <div className="text-[24px] font-black text-white/85 glow-text" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {n.mixedPercent}%
-                  </div>
-                  <div className="text-[9px] tracking-[0.2em] uppercase font-bold text-white/35 mt-1">
-                    Privacy Mix
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* ── BOTTOM: Heartbeat + Crew ─────────────── */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2, duration: 1 }}
-              className="absolute bottom-5 left-0 right-0 flex flex-col items-center gap-2"
-            >
-              {/* Stakeholder headcount */}
-              <div className="text-[11px] tracking-[0.15em] uppercase font-bold text-white/25">
-                {Math.round(n.poolSizeRaw / 1000)}K stakeholders on watch
-              </div>
-
-              {/* Live block heartbeat */}
-              <div className="flex items-center gap-2">
-                <div className="w-[5px] h-[5px] rounded-full bg-emerald-500 animate-live-pulse" />
-                <span className="text-[10px] font-mono text-white/30 tracking-wider" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  Block #{n.blockHeight.toLocaleString()} · {blockAge}
-                </span>
-              </div>
-
-              {/* Tagline */}
-              <div className="text-[9px] text-white/15 tracking-[0.2em] uppercase mt-1">
-                No VCs. No pre-mine. Just code.
-              </div>
-            </motion.div>
-
-            {/* ── New block celebration ───────────────── */}
-            <AnimatePresence>
-              {blockToast && (
-                <>
-                  {/* Flash */}
-                  <motion.div
-                    initial={{ opacity: 0.4 }}
-                    animate={{ opacity: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 2 }}
-                    className="absolute inset-0"
-                    style={{
-                      background: 'radial-gradient(circle at center, rgba(59,240,192,0.12) 0%, transparent 50%)',
-                    }}
-                  />
-                  {/* Toast */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.5 }}
-                    className="absolute top-16 left-1/2 -translate-x-1/2"
-                  >
-                    <span className="badge badge-gold glow-text-gold" style={{ color: '#f0b040', fontSize: '11px' }}>
-                      ⚡ NEW BLOCK
-                    </span>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-
-            {/* ── Detail HUD (press I) ───────────────── */}
-            <AnimatePresence>
-              {showHUD && (
-                <motion.div
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 60 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  className="absolute top-20 right-6 w-[260px] glass p-5 pointer-events-auto"
-                >
-                  <div className="text-[9px] tracking-[0.3em] uppercase font-bold text-white/30 mb-3">
-                    Network Details
-                  </div>
-
-                  {[
-                    { label: 'Market Cap', value: n.marketCap },
-                    { label: 'Volume 24h', value: n.volume },
-                    { label: 'Ticket Price', value: `${n.ticketPrice} DCR` },
-                    { label: 'Pool Size', value: `${n.poolSize} tickets` },
-                    { label: 'Hashrate', value: n.hashrate },
-                    { label: 'Mixed', value: `${n.mixedPercent}%` },
-                  ].map(row => (
-                    <div key={row.label} className="detail-row">
-                      <span className="detail-label">{row.label}</span>
-                      <span className="detail-value">{row.value}</span>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {/* ▸ SQUEEZE BAR */}
+      <section className="squeeze-section fade-in delay-4">
+        <div className="section-label">21,000,000 DCR — Total Supply Allocation</div>
+        <div style={{ position: 'relative' }}>
+          {/* Liquid label above the bar */}
+          <div
+            className="sq-liquid-label"
+            style={{
+              left: `${stakedPct + treasuryPct + (liquidPct / 2)}%`,
+              display: animTrigger ? 'block' : 'none',
+              animation: animTrigger ? 'fadeUp 0.4s ease-out forwards' : 'none',
+              animationDelay: '0.4s',
+              opacity: 0
+            }}
+          >
+            ▼ {liquidDisplay}M LIQUID
           </div>
-        )}
-      </AnimatePresence>
+          <div className="squeeze-bar">
+            <div className="sq-segment sq-staked" style={{ width: animTrigger ? `${stakedPct}%` : '0%' }}>
+              <span className="sq-label"><b>{(data.ticketPoolValue / 1_000_000).toFixed(1)}M</b> Staked</span>
+            </div>
+            <div className="sq-segment sq-treasury" style={{ width: animTrigger ? `${treasuryPct}%` : '0%' }}>
+              <span className="sq-label"><b>{(data.treasuryBalance / 1_000).toFixed(0)}K</b></span>
+            </div>
+            <div className="sq-segment sq-liquid" style={{ width: animTrigger ? `${liquidPct}%` : '0%' }}>
+            </div>
+            <div className="sq-segment sq-unmined">
+              <span className="sq-label sq-label-right"><b>{(data.unminedSupply / 1_000_000).toFixed(1)}M</b> Unmined</span>
+            </div>
+          </div>
+        </div>
+        <div className="legend">
+          <div className="legend-item"><div className="legend-sw stk"></div>Staked in Tickets ({(stakedPct / (totalMined / data.totalSupply)).toFixed(1)}%)</div>
+          <div className="legend-item"><div className="legend-sw trs"></div>Treasury ({(treasuryPct / (totalMined / data.totalSupply)).toFixed(1)}%)</div>
+          <div className="legend-item"><div className="legend-sw liq"></div>Liquid — Available ({(liquidPct / (totalMined / data.totalSupply)).toFixed(1)}%)</div>
+          <div className="legend-item"><div className="legend-sw unm"></div>Not Yet Mined</div>
+        </div>
+      </section>
+
+      {/* ▸ WHY THIS MATTERS */}
+      <section className="why-section fade-in delay-5">
+        <div className="section-label">Why This Matters</div>
+        <div className="why-grid">
+          <div className="why-cell">
+            <div className="why-num">01</div>
+            <div className="why-title">Protocol-Enforced Lockup</div>
+            <div className="why-desc">
+              Staked DCR isn't a promise — it's <strong>code</strong>.
+              Tickets lock coins for up to 142 days with no early exit. This isn't voluntary holding; it's a binding protocol constraint.
+            </div>
+          </div>
+          <div className="why-cell">
+            <div className="why-num">02</div>
+            <div className="why-title">No Unlock Schedules</div>
+            <div className="why-desc">
+              Zero VC allocations. Zero team tokens vesting.
+              No ICO. Every DCR in existence was either <strong>mined or earned</strong> through stakeholder-approved work.
+            </div>
+          </div>
+          <div className="why-cell">
+            <div className="why-num">03</div>
+            <div className="why-title">Buying Pressure ≠ Selling Supply</div>
+            <div className="why-desc">
+              When {lockedPctOfMined.toFixed(0)}% of supply can't be sold, even modest demand has outsized price impact.
+              The <strong>liquid market cap is ${((data.liquidSupply * data.price) / 1000000).toFixed(0)}M</strong> — not ${(data.marketCap / 1000000).toFixed(0)}M.
+            </div>
+          </div>
+          <div className="why-cell">
+            <div className="why-num">04</div>
+            <div className="why-title">The Squeeze Tightens</div>
+            <div className="why-desc">
+              The ticket pool actively absorbs newly mined coins.
+              Stake participation has been <strong>trending upward for years</strong>.
+              Every ticket purchased compresses liquid supply further.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ▸ COMPARISON */}
+      <section className="compare-section fade-in delay-6">
+        <div className="section-label">Protocol-Locked Supply — Cross-Chain</div>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th style={{ width: '120px' }}>Asset</th>
+              <th style={{ width: '90px' }}>Locked</th>
+              <th>Visualization</th>
+              <th style={{ width: '200px' }}>Lock Mechanism</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="highlight-row">
+              <td className="asset-name">Decred</td>
+              <td style={{ color: 'var(--white)', fontWeight: 700 }}>{lockedPctOfMined.toFixed(1)}%</td>
+              <td>
+                <div className="compare-bar-wrap">
+                  <div className="compare-bar-fill fill-dcr" style={{ width: animTrigger ? `${lockedPctOfMined}%` : '0%' }}></div>
+                </div>
+              </td>
+              <td>PoS tickets + treasury. 142-day lock. No early exit.</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Ethereum</td>
+              <td>28.3%</td>
+              <td>
+                <div className="compare-bar-wrap">
+                  <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '28.3%' : '0%' }}></div>
+                </div>
+              </td>
+              <td>Beacon chain staking. Withdrawable post-Shanghai.</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Solana</td>
+              <td>65.1%</td>
+              <td>
+                <div className="compare-bar-wrap">
+                  <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '65.1%' : '0%' }}></div>
+                </div>
+              </td>
+              <td>Delegated PoS. ~2-day unlock period.</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Bitcoin</td>
+              <td>0%</td>
+              <td>
+                <div className="compare-bar-wrap">
+                  <div className="compare-bar-fill fill-other" style={{ width: '0%' }}></div>
+                </div>
+              </td>
+              <td>No protocol lock. All supply is technically liquid.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="compare-note">
+          Decred's lock is the most rigid: no delegation, no liquid staking derivatives, no early withdrawal. Coins are fully inaccessible until the ticket votes or expires.
+        </div>
+      </section>
+
+      {/* ▸ DILUTION DANGER */}
+      <section className="compare-section fade-in delay-6">
+        <div className="section-label">Dilution Danger — Fair Distribution vs. Corporate Extraction</div>
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th style={{ width: '120px' }}>Asset</th>
+              <th style={{ width: '90px' }}>Circulating</th>
+              <th style={{ width: '120px' }}>Market Cap</th>
+              <th style={{ width: '120px' }}>FDV</th>
+              <th>Upcoming Unlocks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="highlight-row">
+              <td className="asset-name">Decred</td>
+              <td style={{ color: 'var(--white)', fontWeight: 700 }}>{((data.coinSupply / data.totalSupply) * 100).toFixed(1)}%</td>
+              <td>${(data.marketCap / 1000000).toFixed(0)}M</td>
+              <td>${((data.totalSupply * data.price) / 1000000).toFixed(0)}M</td>
+              <td>Organic block emission only. No VC unlocks.</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Sui (SUI)</td>
+              <td>34.5%</td>
+              <td>~$3.7B</td>
+              <td>~$16.0B</td>
+              <td>Major monthly unlocks of ~44M SUI</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Aptos (APT)</td>
+              <td>35.0%</td>
+              <td>~$4.5B</td>
+              <td>~$13.0B</td>
+              <td>Monthly unlocks of ~11.3M APT</td>
+            </tr>
+            <tr>
+              <td className="asset-name">Celestia (TIA)</td>
+              <td>15.0%</td>
+              <td>~$500M</td>
+              <td>~$3.3B</td>
+              <td>Massive internal allocation unlocks</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      {/* ▸ NETWORK FUNDAMENTALS */}
+      <section className="metrics-section fade-in delay-7">
+        <div className="section-label">Network Fundamentals</div>
+        <div className="metrics">
+          <div className="metric">
+            <div className="metric-label">Stake Participation</div>
+            <div className="metric-val">{(data.ticketPoolValue / data.coinSupply * 100).toFixed(1)}<span className="metric-unit">%</span></div>
+            <div className="metric-sub">{(data.ticketPoolValue / 1_000_000).toFixed(1)}M DCR locked</div>
+          </div>
+          <div className="metric">
+            <div className="metric-label">Treasury Runway</div>
+            <div className="metric-val">{Math.floor(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500))}<span className="metric-unit"> mo</span></div>
+            <div className="metric-sub">{(data.treasuryBalance / 1_000).toFixed(1)}K DCR &middot; <span className="hl">{formatUSD(data.treasuryBalance * data.price)}</span></div>
+            <div className="metric-sub" style={{ marginTop: '4px', opacity: 0.7 }}>Spending capped at 4%/mo by DCP-0013</div>
+          </div>
+          <div className="metric">
+            <div className="metric-label">Ticket Pool</div>
+            <div className="metric-val">{data.ticketPoolSize.toLocaleString()}</div>
+            <div className="metric-sub">Target: 40,960 &middot; <span className="pos">{((data.ticketPoolSize / 40960) * 100).toFixed(0)}%</span></div>
+          </div>
+          <div className="metric">
+            <div className="metric-label">Privacy Mix</div>
+            <div className="metric-val">{((data.mixedPercent) || 0).toFixed(1)}<span className="metric-unit">%</span></div>
+            <div className="metric-sub">StakeShuffle active</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ▸ REWARD FLOW */}
+      <section className="sankey-section fade-in delay-8">
+        <div className="section-label">Block Reward Distribution (Post-Block 794,368)</div>
+        <div className="sankey-container">
+          <div className="sankey-col sankey-source">
+            <div className="sankey-node s-node-source">
+              <div className="sankey-node-val">1 BLK</div>
+              <div className="sankey-node-label">100% Emission</div>
+            </div>
+          </div>
+          <div className="sankey-middle">
+            <svg className="sankey-svg" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <path className="path-miners" d="M 0,0 C 50,0 50,0 100,0 L 100,15 C 50,15 50,1 0,1 Z" />
+              <path className="path-treasury" d="M 0,1 C 50,1 50,17 100,17 L 100,42 C 50,42 50,11 0,11 Z" />
+              <path className="path-stakers" d="M 0,11 C 50,11 50,44 100,44 L 100,100 C 50,100 50,100 0,100 Z" />
+            </svg>
+          </div>
+          <div className="sankey-col sankey-target">
+            <div className="sankey-node s-node-miners">
+              <div className="sankey-node-val">1%</div>
+              <div className="sankey-node-label">PoW Miners</div>
+            </div>
+            <div className="sankey-node s-node-treasury">
+              <div className="sankey-node-val">10%</div>
+              <div className="sankey-node-label">Treasury</div>
+            </div>
+            <div className="sankey-node s-node-stakers">
+              <div className="sankey-node-val hl-stakers">89%</div>
+              <div className="sankey-node-label">PoS Stakers</div>
+            </div>
+          </div>
+        </div>
+        <div className="compare-note">
+          100% of the new supply is directed by code. The vast majority of new issuance is paid directly to existing holders who physically lock their capital, neutralizing the structural sell pressure typical of pure PoW networks.
+        </div>
+      </section>
+
+      {/* ▸ CLOSING */}
+      <section className="closing fade-in delay-8">
+        <p>
+          <strong>{(data.ticketPoolValue / data.coinSupply * 100).toFixed(0)}% of all mined DCR is locked</strong> and cannot be sold without a 142-day
+          unbonding period. The liquid supply is <span className="acc">{((data.liquidSupply / data.coinSupply) * 100).toFixed(1)}% of mined coins</span>
+          — and shrinking with every ticket purchased.
+        </p>
+      </section>
+
+      {/* ▸ FOOTER */}
+      <footer className="footer fade-in delay-8">
+        <div className="footer-left">
+          Data: dcrdata.decred.org &middot; CoinGecko<br />
+          Updated: Live
+        </div>
+        <div className="footer-right">Fair launch. No ICO. No VCs.</div>
+      </footer>
+
     </div>
   );
 }
