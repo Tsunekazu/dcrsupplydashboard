@@ -98,7 +98,7 @@ function App() {
       <div className="ratio-block fade-in delay-2">
         <p className="ratio-text">
           For every 1 DCR on the open market,<br />
-          <strong>{lockedRatio} DCR are locked by holders</strong><br />
+          <strong className="ratio-accent">{lockedRatio} DCR are locked by holders</strong><br />
           and strictly unavailable for sale.
         </p>
       </div>
@@ -129,12 +129,25 @@ function App() {
           >
             ▼ {liquidDisplay}M LIQUID
           </div>
+          {/* Treasury label pointing down into its section */}
+          <div
+            className="sq-treasury-label"
+            style={{
+              left: `${stakedPct + (treasuryPct / 2)}%`,
+              display: animTrigger ? 'block' : 'none',
+              animation: animTrigger ? 'fadeUp 0.4s ease-out forwards' : 'none',
+              animationDelay: '0.4s',
+              opacity: 0
+            }}
+          >
+            {(data.treasuryBalance / 1_000).toFixed(0)}K
+            <div className="sq-treasury-marker"></div>
+          </div>
           <div className="squeeze-bar">
             <div className="sq-segment sq-staked" style={{ width: animTrigger ? `${stakedPct}%` : '0%' }}>
               <span className="sq-label"><b>{(data.ticketPoolValue / 1_000_000).toFixed(1)}M</b> Staked</span>
             </div>
             <div className="sq-segment sq-treasury" style={{ width: animTrigger ? `${treasuryPct}%` : '0%' }}>
-              <span className="sq-label"><b>{(data.treasuryBalance / 1_000).toFixed(0)}K</b></span>
             </div>
             <div className="sq-segment sq-liquid" style={{ width: animTrigger ? `${liquidPct}%` : '0%' }}>
             </div>
