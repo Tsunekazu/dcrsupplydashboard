@@ -70,9 +70,9 @@ function App() {
     <div className="page">
       {/* ▸ HEADER */}
       <header className="header fade-in">
-        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/decred-symbol-white-transparent.svg" alt="Decred" style={{ width: '26px', height: '26px' }} />
-          <div style={{ transform: 'translateY(1px)' }}>DECRED <span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/decred-logo-white-transparent.svg" alt="Decred" style={{ height: '24px', width: 'auto' }} />
+          <div style={{ transform: 'translateY(1px)' }}><span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
         </div>
         <div className="header-meta" style={{ transform: 'translateY(1px)' }}>
           <span className="live-dot"></span>Live &middot; dcrdata.decred.org<br />
