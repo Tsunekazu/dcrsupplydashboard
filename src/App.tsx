@@ -70,7 +70,13 @@ function App() {
     <div className="page">
       {/* ▸ HEADER */}
       <header className="header fade-in">
-        <div className="logo">DECRED <span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="22" height="22">
+            <path fill="#2ed6a1" d="M512 0C229.2 0 0 229.2 0 512s229.2 512 512 512 512-229.2 512-512S794.8 0 512 0z" />
+            <path fill="#091440" d="M699.2 512c0-155.6-79.6-267.6-258.8-267.6H275.6v535.2h164.8c179.2 0 258.8-112 258.8-267.6z m-166.4 0c0 104.8-17.6 156.4-110 156.4H396V355.6h26.8c92.4 0 110 51.6 110 156.4z" />
+          </svg>
+          <div>DECRED <span className="logo-sep">/</span> <span className="logo-dim">Supply Report</span></div>
+        </div>
         <div className="header-meta">
           <span className="live-dot"></span>Live &middot; dcrdata.decred.org<br />
           Block #{data.blockHeight.toLocaleString()} &middot; {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -188,58 +194,60 @@ function App() {
       {/* ▸ COMPARISON */}
       <section className="compare-section fade-in delay-6">
         <div className="section-label">Protocol-Locked Supply — Cross-Chain</div>
-        <table className="compare-table">
-          <thead>
-            <tr>
-              <th style={{ width: '120px' }}>Asset</th>
-              <th style={{ width: '90px' }}>Locked</th>
-              <th>Visualization</th>
-              <th style={{ width: '200px' }}>Lock Mechanism</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="highlight-row">
-              <td className="asset-name">Decred</td>
-              <td style={{ color: 'var(--white)', fontWeight: 700 }}>{lockedPctOfMined.toFixed(1)}%</td>
-              <td>
-                <div className="compare-bar-wrap">
-                  <div className="compare-bar-fill fill-dcr" style={{ width: animTrigger ? `${lockedPctOfMined}%` : '0%' }}></div>
-                </div>
-              </td>
-              <td>PoS tickets + treasury. 142-day lock. No early exit.</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Ethereum</td>
-              <td>28.3%</td>
-              <td>
-                <div className="compare-bar-wrap">
-                  <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '28.3%' : '0%' }}></div>
-                </div>
-              </td>
-              <td>Beacon chain staking. Withdrawable post-Shanghai.</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Solana</td>
-              <td>65.1%</td>
-              <td>
-                <div className="compare-bar-wrap">
-                  <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '65.1%' : '0%' }}></div>
-                </div>
-              </td>
-              <td>Delegated PoS. ~2-day unlock period.</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Bitcoin</td>
-              <td>0%</td>
-              <td>
-                <div className="compare-bar-wrap">
-                  <div className="compare-bar-fill fill-other" style={{ width: '0%' }}></div>
-                </div>
-              </td>
-              <td>No protocol lock. All supply is technically liquid.</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-wrapper">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th style={{ width: '120px' }}>Asset</th>
+                <th style={{ width: '90px' }}>Locked</th>
+                <th>Visualization</th>
+                <th style={{ width: '200px' }}>Lock Mechanism</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="highlight-row">
+                <td className="asset-name">Decred</td>
+                <td style={{ color: 'var(--white)', fontWeight: 700 }}>{lockedPctOfMined.toFixed(1)}%</td>
+                <td>
+                  <div className="compare-bar-wrap">
+                    <div className="compare-bar-fill fill-dcr" style={{ width: animTrigger ? `${lockedPctOfMined}%` : '0%' }}></div>
+                  </div>
+                </td>
+                <td>PoS tickets + treasury. 142-day lock. No early exit.</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Ethereum</td>
+                <td>28.3%</td>
+                <td>
+                  <div className="compare-bar-wrap">
+                    <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '28.3%' : '0%' }}></div>
+                  </div>
+                </td>
+                <td>Beacon chain staking. Withdrawable post-Shanghai.</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Solana</td>
+                <td>65.1%</td>
+                <td>
+                  <div className="compare-bar-wrap">
+                    <div className="compare-bar-fill fill-other" style={{ width: animTrigger ? '65.1%' : '0%' }}></div>
+                  </div>
+                </td>
+                <td>Delegated PoS. ~2-day unlock period.</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Bitcoin</td>
+                <td>0%</td>
+                <td>
+                  <div className="compare-bar-wrap">
+                    <div className="compare-bar-fill fill-other" style={{ width: '0%' }}></div>
+                  </div>
+                </td>
+                <td>No protocol lock. All supply is technically liquid.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <div className="compare-note">
           Decred's lock is the most rigid: no delegation, no liquid staking derivatives, no early withdrawal. Coins are fully inaccessible until the ticket votes or expires.
         </div>
@@ -248,47 +256,49 @@ function App() {
       {/* ▸ DILUTION DANGER */}
       <section className="compare-section fade-in delay-6">
         <div className="section-label">Dilution Danger — Fair Distribution vs. Corporate Extraction</div>
-        <table className="compare-table">
-          <thead>
-            <tr>
-              <th style={{ width: '120px' }}>Asset</th>
-              <th style={{ width: '90px' }}>Circulating</th>
-              <th style={{ width: '120px' }}>Market Cap</th>
-              <th style={{ width: '120px' }}>FDV</th>
-              <th>Upcoming Unlocks</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="highlight-row">
-              <td className="asset-name">Decred</td>
-              <td style={{ color: 'var(--white)', fontWeight: 700 }}>{((data.coinSupply / data.totalSupply) * 100).toFixed(1)}%</td>
-              <td>${(data.marketCap / 1000000).toFixed(0)}M</td>
-              <td>${((data.totalSupply * data.price) / 1000000).toFixed(0)}M</td>
-              <td>Organic block emission only. No VC unlocks.</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Sui (SUI)</td>
-              <td>34.5%</td>
-              <td>~$3.7B</td>
-              <td>~$16.0B</td>
-              <td>Major monthly unlocks of ~44M SUI</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Aptos (APT)</td>
-              <td>35.0%</td>
-              <td>~$4.5B</td>
-              <td>~$13.0B</td>
-              <td>Monthly unlocks of ~11.3M APT</td>
-            </tr>
-            <tr>
-              <td className="asset-name">Celestia (TIA)</td>
-              <td>15.0%</td>
-              <td>~$500M</td>
-              <td>~$3.3B</td>
-              <td>Massive internal allocation unlocks</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-wrapper">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th style={{ width: '120px' }}>Asset</th>
+                <th style={{ width: '90px' }}>Circulating</th>
+                <th style={{ width: '120px' }}>Market Cap</th>
+                <th style={{ width: '120px' }}>FDV</th>
+                <th>Upcoming Unlocks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="highlight-row">
+                <td className="asset-name">Decred</td>
+                <td style={{ color: 'var(--white)', fontWeight: 700 }}>{((data.coinSupply / data.totalSupply) * 100).toFixed(1)}%</td>
+                <td>${(data.marketCap / 1000000).toFixed(0)}M</td>
+                <td>${((data.totalSupply * data.price) / 1000000).toFixed(0)}M</td>
+                <td>Organic block emission only. No VC unlocks.</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Sui (SUI)</td>
+                <td>34.5%</td>
+                <td>~$3.7B</td>
+                <td>~$16.0B</td>
+                <td>Major monthly unlocks of ~44M SUI</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Aptos (APT)</td>
+                <td>35.0%</td>
+                <td>~$4.5B</td>
+                <td>~$13.0B</td>
+                <td>Monthly unlocks of ~11.3M APT</td>
+              </tr>
+              <tr>
+                <td className="asset-name">Celestia (TIA)</td>
+                <td>15.0%</td>
+                <td>~$500M</td>
+                <td>~$3.3B</td>
+                <td>Massive internal allocation unlocks</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* ▸ NETWORK FUNDAMENTALS */}
@@ -322,32 +332,34 @@ function App() {
       {/* ▸ REWARD FLOW */}
       <section className="sankey-section fade-in delay-8">
         <div className="section-label">Block Reward Distribution (Post-Block 794,368)</div>
-        <div className="sankey-container">
-          <div className="sankey-col sankey-source">
-            <div className="sankey-node s-node-source">
-              <div className="sankey-node-val">1 BLK</div>
-              <div className="sankey-node-label">100% Emission</div>
+        <div className="sankey-wrapper">
+          <div className="sankey-container">
+            <div className="sankey-col sankey-source">
+              <div className="sankey-node s-node-source">
+                <div className="sankey-node-val">1 BLK</div>
+                <div className="sankey-node-label">100% Emission</div>
+              </div>
             </div>
-          </div>
-          <div className="sankey-middle">
-            <svg className="sankey-svg" preserveAspectRatio="none" viewBox="0 0 100 100">
-              <path className="path-miners" d="M 0,0 C 50,0 50,0 100,0 L 100,15 C 50,15 50,1 0,1 Z" />
-              <path className="path-treasury" d="M 0,1 C 50,1 50,17 100,17 L 100,42 C 50,42 50,11 0,11 Z" />
-              <path className="path-stakers" d="M 0,11 C 50,11 50,44 100,44 L 100,100 C 50,100 50,100 0,100 Z" />
-            </svg>
-          </div>
-          <div className="sankey-col sankey-target">
-            <div className="sankey-node s-node-miners">
-              <div className="sankey-node-val">1%</div>
-              <div className="sankey-node-label">PoW Miners</div>
+            <div className="sankey-middle">
+              <svg className="sankey-svg" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <path className="path-miners" d="M 0,0 C 50,0 50,0 100,0 L 100,15 C 50,15 50,1 0,1 Z" />
+                <path className="path-treasury" d="M 0,1 C 50,1 50,17 100,17 L 100,42 C 50,42 50,11 0,11 Z" />
+                <path className="path-stakers" d="M 0,11 C 50,11 50,44 100,44 L 100,100 C 50,100 50,100 0,100 Z" />
+              </svg>
             </div>
-            <div className="sankey-node s-node-treasury">
-              <div className="sankey-node-val">10%</div>
-              <div className="sankey-node-label">Treasury</div>
-            </div>
-            <div className="sankey-node s-node-stakers">
-              <div className="sankey-node-val hl-stakers">89%</div>
-              <div className="sankey-node-label">PoS Stakers</div>
+            <div className="sankey-col sankey-target">
+              <div className="sankey-node s-node-miners">
+                <div className="sankey-node-val">1%</div>
+                <div className="sankey-node-label">PoW Miners</div>
+              </div>
+              <div className="sankey-node s-node-treasury">
+                <div className="sankey-node-val">10%</div>
+                <div className="sankey-node-label">Treasury</div>
+              </div>
+              <div className="sankey-node s-node-stakers">
+                <div className="sankey-node-val hl-stakers">89%</div>
+                <div className="sankey-node-label">PoS Stakers</div>
+              </div>
             </div>
           </div>
         </div>

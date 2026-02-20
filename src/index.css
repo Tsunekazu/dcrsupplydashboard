@@ -222,9 +222,9 @@ body {
 
 .hero-sub {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 400;
-  color: var(--w40);
+  color: var(--w80);
   margin-top: 20px;
   text-align: center;
   line-height: 1.6;
@@ -337,7 +337,7 @@ body {
   display: flex;
   align-items: center;
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden removed to allow labels like Treasury to spill if container is narrow */
   transition: width 1.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -413,6 +413,12 @@ body {
   padding: 0 14px;
   white-space: nowrap;
   letter-spacing: 0.02em;
+}
+
+.sq-treasury .sq-label {
+  padding: 0;
+  text-align: center;
+  width: 100%;
 }
 
 .sq-label b {
@@ -538,9 +544,9 @@ body {
 
 .why-desc {
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--w40);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--w60);
 }
 
 .why-desc strong {
@@ -635,6 +641,19 @@ body {
   line-height: 1.6;
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sankey-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 20px;
+}
+
 /* ═══════════════════════════════════
    METRICS GRID
    ═══════════════════════════════════ */
@@ -707,9 +726,9 @@ body {
 
 .closing p {
   font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.85;
-  color: var(--w40);
+  font-size: 16px;
+  line-height: 1.9;
+  color: var(--w60);
   max-width: 620px;
 }
 
@@ -945,6 +964,10 @@ body {
     letter-spacing: -3px;
   }
 
+  .hero-sub {
+    font-size: 15px;
+  }
+
   .ratio-text {
     font-size: 20px;
   }
@@ -963,6 +986,32 @@ body {
 
   .compare-bar-wrap {
     max-width: 100px;
+  }
+
+  .compare-table {
+    min-width: 600px;
+  }
+
+  .sankey-container {
+    min-width: 600px;
+  }
+
+  .sq-label {
+    font-size: 9px;
+    padding: 0 6px;
+    letter-spacing: 0;
+  }
+
+  .sq-treasury .sq-label {
+    opacity: 0;
+  }
+
+  .legend {
+    gap: 12px;
+  }
+
+  .why-desc {
+    font-size: 13px;
   }
 
   .footer {
