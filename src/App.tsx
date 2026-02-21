@@ -322,7 +322,13 @@ function App() {
           </div>
           <div className="metric">
             <div className="metric-label">Treasury Runway</div>
-            <div className="metric-val">{Math.floor(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500))}<span className="metric-unit"> mo</span></div>
+            <div className="metric-val">
+              {Math.floor(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500))}
+              <span className="metric-unit"> mo</span>
+              <span style={{ fontSize: '0.45em', opacity: 0.7, marginLeft: '8px', verticalAlign: 'middle' }}>
+                ({(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500) / 12).toFixed(1)}y)
+              </span>
+            </div>
             <div className="metric-sub">{(data.treasuryBalance / 1_000).toFixed(1)}K DCR &middot; <span className="hl">{formatUSD(data.treasuryBalance * data.price)}</span></div>
             <div className="metric-sub" style={{ marginTop: '4px', opacity: 0.7 }}>Spending capped at 4%/mo by DCP-0013</div>
           </div>
