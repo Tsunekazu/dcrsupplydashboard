@@ -75,7 +75,7 @@ interface SupplyResponseObject {
 
 type SupplyResponse = number | SupplyResponseObject;
 
-type TreasuryBalanceResponse = number | { balance?: number; total?: number };
+type TreasuryBalanceResponse = number | { balance?: number; total?: number; spent?: number; spend_count?: number };
 
 interface CoinGeckoPriceResponse {
   decred?: {
@@ -213,6 +213,12 @@ export async function fetchDecredData(): Promise<DecredData> {
       const treasuryAtoms = toNumber(treasuryBal.balance) ?? toNumber(treasuryBal.total);
       if (treasuryAtoms !== null) {
         data.treasuryBalance = treasuryAtoms / 1e8;
+      }
+
+      const spentAtoms = toNumber(treasuryBal.spent);
+      const spendCount = toNumber(treasuryBal.spend_count);
+      if (spentAtoms !== null && spendCount !== null && spendCount > 0) {
+        data.treasuryMonthlyBurn = (spentAtoms / 1e8) / spendCount;
       }
     }
   }
