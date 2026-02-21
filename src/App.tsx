@@ -326,7 +326,7 @@ function App() {
               {Math.floor(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500))}
               <span className="metric-unit"> mo</span>
               <span style={{ fontSize: '0.45em', opacity: 0.7, marginLeft: '8px', verticalAlign: 'middle' }}>
-                ({(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500) / 12).toFixed(1)}y)
+                ({(data.treasuryBalance / (data.treasuryMonthlyBurn || 22500) / 12).toFixed(1)} years)
               </span>
             </div>
             <div className="metric-sub">{(data.treasuryBalance / 1_000).toFixed(1)}K DCR &middot; <span className="hl">{formatUSD(data.treasuryBalance * data.price)}</span></div>
