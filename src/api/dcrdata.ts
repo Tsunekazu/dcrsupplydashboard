@@ -78,6 +78,10 @@ type SupplyResponse = number | SupplyResponseObject;
 
 type TreasuryBalanceResponse = number | { balance?: number; total?: number; spent?: number; spend_count?: number };
 
+interface AddressTotalsResponse {
+  dcr_unspent?: number;
+}
+
 interface CoinGeckoPriceResponse {
   decred?: {
     usd?: number;
@@ -162,11 +166,14 @@ function calculateNetworkScore(data: Partial<DecredData>): number {
 }
 
 export async function fetchDecredData(): Promise<DecredData> {
-  const [bestBlock, stakeInfo, supply, treasuryBal, priceData] = await Promise.all([
+  const LEGACY_TREASURY = 'Dcur2mcGjmENx4DhNqDctW5wJCVyT3Qeqkx';
+
+  const [bestBlock, stakeInfo, supply, treasuryBal, legacyTreasury, priceData] = await Promise.all([
     safeFetch<BestBlockResponse>(`${DCRDATA_BASE}/block/best`),
     safeFetch<StakePoolResponse>(`${DCRDATA_BASE}/stake/pool`),
     safeFetch<SupplyResponse>(`${DCRDATA_BASE}/supply`),
     safeFetch<TreasuryBalanceResponse>(`${DCRDATA_BASE}/treasury/balance`),
+    safeFetch<AddressTotalsResponse>(`${DCRDATA_BASE}/address/${LEGACY_TREASURY}/totals`),
     safeFetch<CoinGeckoPriceResponse>(`${COINGECKO_BASE}/simple/price?ids=decred&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`),
   ]);
 
@@ -221,6 +228,14 @@ export async function fetchDecredData(): Promise<DecredData> {
       if (spentAtoms !== null && spendCount !== null && spendCount > 0) {
         data.treasuryMonthlyBurn = (spentAtoms / 1e8) / spendCount;
       }
+    }
+  }
+
+  // Add legacy treasury balance (pre-decentralized treasury address)
+  if (legacyTreasury) {
+    const legacyBalance = toNumber(legacyTreasury.dcr_unspent);
+    if (legacyBalance !== null) {
+      data.treasuryBalance += legacyBalance;
     }
   }
 
