@@ -854,6 +854,106 @@ body {
 }
 
 /* ═══════════════════════════════════
+   HISTORICAL CHART
+   ═══════════════════════════════════ */
+.chart-section {
+  margin-bottom: 72px;
+}
+
+.chart-wrap {
+  background: var(--blue-bg);
+  border: 1px solid var(--w15);
+  padding: 28px 24px 20px;
+  position: relative;
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+}
+
+.chart-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 0;
+  color: var(--w40);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.chart-loading-bar {
+  width: 120px;
+  height: 2px;
+  background: var(--w08);
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+
+.chart-loading-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--teal);
+  animation: loadSlide 1.2s ease-in-out infinite;
+}
+
+@keyframes loadSlide {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.chart-legend {
+  display: flex;
+  gap: 28px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--w08);
+  flex-wrap: wrap;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--w60);
+}
+
+.chart-legend-sw {
+  width: 12px;
+  height: 3px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.chart-sw-locked {
+  background: var(--teal);
+  height: 4px;
+}
+
+.chart-sw-circ {
+  background: var(--w25);
+  border-top: 1px dashed var(--w40);
+  height: 0;
+}
+
+.chart-sw-liquid {
+  background: var(--red);
+}
+
+/* ═══════════════════════════════════
    SANKEY DIAGRAM (REWARD FLOW)
    ═══════════════════════════════════ */
 .sankey-section {

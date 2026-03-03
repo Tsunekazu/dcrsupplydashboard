@@ -68,6 +68,7 @@ interface StakePoolResponse {
 }
 
 interface SupplyResponseObject {
+  supply_mined?: number;
   supply_total?: number;
   coin_supply?: number;
   mixed_percent?: number;
@@ -192,7 +193,7 @@ export async function fetchDecredData(): Promise<DecredData> {
     if (typeof supply === 'number') {
       data.coinSupply = supply / 1e8; // atoms to DCR
     } else {
-      const totalSupplyAtoms = toNumber(supply.supply_total) ?? toNumber(supply.coin_supply);
+      const totalSupplyAtoms = toNumber(supply.supply_mined) ?? toNumber(supply.supply_total) ?? toNumber(supply.coin_supply);
       if (totalSupplyAtoms !== null) {
         data.coinSupply = totalSupplyAtoms / 1e8;
       }
@@ -267,4 +268,133 @@ export function timeSince(unixSeconds: number): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+// ────────────────────────────────────────────────
+// Historical data for the "Squeeze Over Time" chart
+// ────────────────────────────────────────────────
+
+export interface HistoricalDataPoint {
+  date: Date;
+  circulation: number;
+  staked: number;
+  treasury: number;
+  locked: number;
+  liquid: number;
+  lockedPct: number;
+}
+
+interface StakeChartResponse {
+  t: number[];
+  circulation: number[];
+  poolval: number[];
+}
+
+interface TreasuryIOResponse {
+  time: string[];
+  received: number[];
+  sent: number[];
+}
+
+interface LegacyTreasuryResponse {
+  time: string[];
+  received: number[];
+  sent: number[];
+}
+
+function atomicToDCR(atomic: number): number {
+  return atomic / 1e8;
+}
+
+export async function fetchHistoricalData(): Promise<HistoricalDataPoint[]> {
+  const [stakeRes, treasuryIORes, legacyRes] = await Promise.all([
+    safeFetch<StakeChartResponse>(`${DCRDATA_BASE}/chart/stake-participation?axis=time&bin=day`, 15000),
+    safeFetch<TreasuryIOResponse>(`${DCRDATA_BASE}/treasury/io/day`, 15000),
+    safeFetch<LegacyTreasuryResponse>(`${DCRDATA_BASE}/address/Dcur2mcGjmENx4DhNqDctW5wJCVyT3Qeqkx/amountflow/day`, 15000),
+  ]);
+
+  if (!stakeRes?.t?.length) return [];
+
+  // Build legacy treasury cumulative balance by date
+  const legacyByDate: Record<string, number> = {};
+  let legacyCumulative = 0;
+  if (legacyRes?.time) {
+    for (let i = 0; i < legacyRes.time.length; i++) {
+      legacyCumulative += legacyRes.received[i] - legacyRes.sent[i];
+      legacyByDate[legacyRes.time[i].split('T')[0]] = legacyCumulative;
+    }
+  }
+
+  // Build new treasury cumulative balance by date
+  const treasuryByDate: Record<string, number> = {};
+  let treasuryCumulative = 0;
+  if (treasuryIORes?.time) {
+    for (let i = 0; i < treasuryIORes.time.length; i++) {
+      treasuryCumulative += treasuryIORes.received[i] - treasuryIORes.sent[i];
+      treasuryByDate[treasuryIORes.time[i].split('T')[0]] = treasuryCumulative;
+    }
+  }
+
+  const firstTreasuryDate = treasuryIORes?.time?.[0]
+    ? new Date(treasuryIORes.time[0]).getTime()
+    : new Date('2021-05-08').getTime();
+
+  let lastKnownNewTreasury = 0;
+  let lastKnownLegacy = 0;
+
+  // Sample every 7 days to keep data manageable
+  const result: HistoricalDataPoint[] = [];
+  for (let i = 0; i < stakeRes.t.length; i += 7) {
+    const timestamp = stakeRes.t[i];
+    const date = new Date(timestamp * 1000);
+    const dateKey = date.toISOString().split('T')[0];
+    const timestampMs = timestamp * 1000;
+
+    if (treasuryByDate[dateKey] !== undefined) lastKnownNewTreasury = treasuryByDate[dateKey];
+    if (legacyByDate[dateKey] !== undefined) lastKnownLegacy = legacyByDate[dateKey];
+
+    let treasury = 0;
+    if (timestampMs >= firstTreasuryDate) {
+      treasury = lastKnownNewTreasury + lastKnownLegacy;
+    } else if (lastKnownLegacy > 0) {
+      treasury = lastKnownLegacy;
+    }
+
+    const circulation = atomicToDCR(stakeRes.circulation[i]);
+    const staked = atomicToDCR(stakeRes.poolval[i]);
+    const locked = staked + treasury;
+    const liquid = circulation - locked;
+    const lockedPct = circulation > 0 ? (locked / circulation) * 100 : 0;
+
+    result.push({ date, circulation, staked, treasury, locked, liquid, lockedPct });
+  }
+
+  // Always include the last data point
+  const lastIdx = stakeRes.t.length - 1;
+  if (lastIdx % 7 !== 0) {
+    const timestamp = stakeRes.t[lastIdx];
+    const date = new Date(timestamp * 1000);
+    const dateKey = date.toISOString().split('T')[0];
+    const timestampMs = timestamp * 1000;
+
+    if (treasuryByDate[dateKey] !== undefined) lastKnownNewTreasury = treasuryByDate[dateKey];
+    if (legacyByDate[dateKey] !== undefined) lastKnownLegacy = legacyByDate[dateKey];
+
+    let treasury = 0;
+    if (timestampMs >= firstTreasuryDate) {
+      treasury = lastKnownNewTreasury + lastKnownLegacy;
+    } else if (lastKnownLegacy > 0) {
+      treasury = lastKnownLegacy;
+    }
+
+    const circulation = atomicToDCR(stakeRes.circulation[lastIdx]);
+    const staked = atomicToDCR(stakeRes.poolval[lastIdx]);
+    const locked = staked + treasury;
+    const liquid = circulation - locked;
+    const lockedPct = circulation > 0 ? (locked / circulation) * 100 : 0;
+
+    result.push({ date, circulation, staked, treasury, locked, liquid, lockedPct });
+  }
+
+  return result;
 }

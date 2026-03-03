@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDecredData } from './hooks/useDecredData';
 import { formatUSD } from './api/dcrdata';
+import LockedSupplyChart from './components/LockedSupplyChart';
 import './index.css';
 
 function App() {
@@ -160,6 +161,9 @@ function App() {
           <div className="legend-item"><div className="legend-sw unm"></div>Not Yet Mined</div>
         </div>
       </section>
+
+      {/* ▸ HISTORICAL CHART */}
+      <LockedSupplyChart />
 
       {/* ▸ WHY THIS MATTERS */}
       <section className="why-section fade-in delay-5">
